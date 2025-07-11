@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2D CAD利用技術者試験風クイズ（最終確認版）</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f2f5;
+            color: #333;
+        }
+
+        #game-container {
+            background-color: #ffffff;
+            padding: 30px 40px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 700px;
+            text-align: center;
+        }
+
+        h1 {
+            color: #0056b3;
+            border-bottom: 2px solid #0056b3;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        #question-container {
+            margin: 20px 0;
+        }
+
+        #question-text {
+            font-size: 1.4em;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+
+        .btn-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+
+        .btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+
+        .btn:hover:not(:disabled) {
+            background-color: #0056b3;
+            transform: translateY(-2px);
+        }
+
+        .btn.correct {
+            background-color: #28a745;
+        }
+
+        .btn.wrong {
+            background-color: #dc3545;
+        }
+
+        .btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        #controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 25px;
+        }
+
+        #start-btn, #next-btn, #restart-btn {
+            background-color: #6c757d;
+            color: white;
+            padding: 12px 30px;
+            font-size: 1.2em;
+            border-radius: 8px;
+            cursor: pointer;
+            border: none;
+        }
+
+        #start-btn:hover, #next-btn:hover, #restart-btn:hover {
+            background-color: #5a6268;
+        }
+
+        #result-container {
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .hide {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <h1>2D CAD クイズゲーム 🎮</h1>
+        <div id="start-screen">
+            <p>PDFの内容に基づいた5択クイズです。準備ができたらスタートしてください。</p>
+            <button id="start-btn">スタート</button>
+        </div>
+
+        <div id="quiz-screen" class="hide">
+            <div id="question-container">
+                <p id="question-text">ここに質問文が入ります。</p>
+                <div id="answer-buttons" class="btn-grid"></div>
+            </div>
+            <div id="controls">
+                <button id="next-btn" class="hide">次へ</button>
+            </div>
+        </div>
+
+        <div id="result-container" class="hide"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const startButton = document.getElementById('start-btn');
+            const nextButton = document.getElementById('next-btn');
+            const startScreen = document.getElementById('start-screen');
+            const quizScreen = document.getElementById('quiz-screen');
+            const questionContainerElement = document.getElementById('question-container');
+            const questionElement = document.getElementById('question-text');
+            const answerButtonsElement = document.getElementById('answer-buttons');
+            const resultContainer = document.getElementById('result-container');
+
+            let shuffledQuestions, currentQuestionIndex;
+            let score = 0;
+
+            const questions = [
+                {
+                    question: '施設管理部門に適したデータと連携したシステムで、CADが活用される分野は何と呼ばれますか？',
+                    answers: [
+                        { text: 'ファシリティマネージメント', correct: true },
+                        { text: 'GISシステム', correct: false },
+                        { text: 'コンカレントエンジニアリング', correct: false },
+                        { text: 'FA', correct: false },
+                        { text: 'BIM', correct: false }
+                    ]
+                },
+                {
+                    question: 'LANボードやネットワークアダプタとも呼ばれる、ネットワーク接続用の専用基板の略称は何ですか？',
+                    answers: [
+                        { text: 'NIC', correct: true },
+                        { text: 'ISP', correct: false },
+                        { text: 'PPP', correct: false },
+                        { text: 'DNS', correct: false },
+                        { text: 'MAC', correct: false }
+                    ]
+                },
+                {
+                    question: 'CADソフトウェアの運用において、ライセンスを管理するために最も重要な情報は何ですか？',
+                    answers: [
+                        { text: 'シリアル番号', correct: true },
+                        { text: '機器の仕様', correct: false },
+                        { text: '設定ファイル', correct: false },
+                        { text: 'データの更新履歴', correct: false },
+                        { text: 'ユーザー名', correct: false }
+                    ]
+                },
+                {
+                    question: 'JIS Z 8313によると、漢字の太さは、漢字の高さに対してどのくらいの割合で書くことが望ましいとされていますか？',
+                    answers: [
+                        { text: '1/14', correct: true },
+                        { text: '1/8', correct: false },
+                        { text: '1/10', correct: false },
+                        { text: '1/20', correct: false },
+                        { text: '1/12', correct: false }
+                    ]
+                },
+                {
+                    question: '全体の寸法が1150mm x 644mmの図面について、JISの様式に基づいた場合、最も適切な用紙サイズと尺度の組み合わせはどれですか？',
+                    answers: [
+                        { text: 'A3, 1:10', correct: true },
+                        { text: 'A1, 1:1', correct: false },
+                        { text: 'A2, 1:5', correct: false },
+                        { text: 'A4, 1:50', correct: false },
+                        { text: 'A2, 1:20', correct: false }
+                    ]
+                }
+            ];
+
+            startButton.addEventListener('click', startGame);
+            nextButton.addEventListener('click', () => {
+                currentQuestionIndex++;
+                setNextQuestion();
+            });
+
+            function startGame() {
+                score = 0;
+                startScreen.classList.add('hide');
+                resultContainer.classList.add('hide');
+                quizScreen.classList.remove('hide');
+                shuffledQuestions = questions.sort(() => Math.random() - 0.5);
+                currentQuestionIndex = 0;
+                setNextQuestion();
+            }
+
+            function setNextQuestion() {
+                resetState();
+                if (currentQuestionIndex < shuffledQuestions.length) {
+                    showQuestion(shuffledQuestions[currentQuestionIndex]);
+                } else {
+                    showResult();
+                }
+            }
+
+            function showResult() {
+                quizScreen.classList.add('hide');
+                resultContainer.innerHTML = '';
+                resultContainer.classList.remove('hide');
+
+                const resultText = document.createElement('p');
+                resultText.innerHTML = `🎉完了！🎉<br>あなたのスコアは ${score} / ${questions.length} です。`;
+                resultContainer.appendChild(resultText);
+
+                const restartButton = document.createElement('button');
+                restartButton.innerText = 'もう一度挑戦';
+                restartButton.id = 'restart-btn';
+                restartButton.addEventListener('click', startGame);
+                resultContainer.appendChild(restartButton);
+            }
+
+            function showQuestion(questionData) {
+                questionElement.innerText = questionData.question;
+
+                // 回答をランダムに並び替え
+                const shuffledAnswers = questionData.answers.sort(() => Math.random() - 0.5);
+
+                shuffledAnswers.forEach(answer => {
+                    const button = document.createElement('button');
+                    button.innerText = answer.text;
+                    button.classList.add('btn');
+                    if (answer.correct) {
+                        button.dataset.correct = answer.correct;
+                    }
+                    button.addEventListener('click', selectAnswer);
+                    answerButtonsElement.appendChild(button);
+                });
+            }
+
+            function resetState() {
+                nextButton.classList.add('hide');
+                nextButton.innerText = '次へ';
+                while (answerButtonsElement.firstChild) {
+                    answerButtonsElement.removeChild(answerButtonsElement.firstChild);
+                }
+            }
+
+            function selectAnswer(e) {
+                const selectedButton = e.target;
+                const correct = selectedButton.dataset.correct === 'true';
+
+                if (correct) {
+                    score++;
+                }
+
+                setStatusClass(selectedButton, correct);
+                Array.from(answerButtonsElement.children).forEach(button => {
+                    if (button.dataset.correct === 'true') {
+                        setStatusClass(button, true);
+                    }
+                    button.disabled = true;
+                });
+
+                if (shuffledQuestions.length > currentQuestionIndex + 1) {
+                    nextButton.classList.remove('hide');
+                } else {
+                    nextButton.innerText = '結果を見る';
+                    nextButton.classList.remove('hide');
+                }
+            }
+
+            function setStatusClass(element, correct) {
+                clearStatusClass(element);
+                if (correct) {
+                    element.classList.add('correct');
+                } else {
+                    element.classList.add('wrong');
+                }
+            }
+
+            function clearStatusClass(element) {
+                element.classList.remove('correct');
+                element.classList.remove('wrong');
+            }
+        });
+    </script>
+</body>
+</html>
